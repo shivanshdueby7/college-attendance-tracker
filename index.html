@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Ledger — College Bunk Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Public+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6F1E7; --paper-2:#EFE7D5; --paper-3:#E7DCC3;
+  --ink:#1A1E28; --ink-soft:#4B5263; --rule:#D8CDB4;
+  --accent:#0E4D3C; --accent-ink:#FFFFFF;
+  --stamp-red:#C1272D; --amber:#B7791F; --margin-red:#E8AFAF;
+  --shadow:4px 4px 0 var(--ink);
+  --shadow-sm:2px 2px 0 var(--ink);
+  --radius:10px;
+}
+[data-theme="dark"]{
+  --paper:#12141A; --paper-2:#1A1E28; --paper-3:#222839;
+  --ink:#EDE6D6; --ink-soft:#9AA0B2; --rule:#2C3242;
+  --accent:#3DD598; --accent-ink:#0B1512;
+  --stamp-red:#FF6B6B; --amber:#FFC24B; --margin-red:#5a3434;
+  --shadow:4px 4px 0 #000;
+  --shadow-sm:2px 2px 0 #000;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Public Sans",system-ui,sans-serif; font-size:14.5px; line-height:1.5;
+  background-image:repeating-linear-gradient(0deg, transparent 0 31px, var(--rule) 31px 32px);
+  background-attachment:fixed;
+  background-size:100% 100%;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
+}
+.mono{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+.wrap{max-width:920px; margin:0 auto; padding:0 18px 120px}
+/* Masthead */
+.masthead{
+  position:sticky; top:0; z-index:50;
+  background:var(--paper); border-bottom:2px solid var(--ink);
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:12px 18px; max-width:920px; margin:0 auto;
+}
+.brand-kicker{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em; color:var(--ink-soft)}
+.brand-name{font-family:"Fraunces",serif; font-weight:900; font-size:22px; line-height:1; letter-spacing:-.02em; border:none; background:transparent; color:var(--ink); width:100%; max-width:320px}
+.brand-name:focus{outline:2px dashed var(--amber); outline-offset:4px}
+.seal{display:flex; align-items:center; gap:10px}
+.seal-ring{width:58px; height:58px; border:2px solid var(--ink); border-radius:50%; display:grid; place-items:center; background:var(--paper-2); box-shadow:var(--shadow-sm); transform:rotate(-4deg)}
+.seal-ring b{font-family:"IBM Plex Mono",monospace; font-size:15px}
+.theme-btn{border:2px solid var(--ink); background:var(--paper-2); border-radius:999px; padding:7px 12px; font-family:"IBM Plex Mono",monospace; font-size:12px; cursor:pointer; box-shadow:var(--shadow-sm); transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
+.theme-btn:active{transform:scale(.96)}
+/* Sections */
+.sec{margin-top:34px; border:2px solid var(--ink); border-radius:var(--radius); background:var(--paper); box-shadow:var(--shadow); overflow:hidden; scroll-margin-top:100px}
+.sec-head{display:flex; align-items:baseline; gap:12px; padding:14px 18px; border-bottom:2px solid var(--ink); background:var(--paper-2)}
+.sec-num{font-family:"IBM Plex Mono",monospace; font-size:12px; border:2px solid var(--ink); padding:2px 8px; border-radius:999px; background:var(--paper)}
+.sec-title{font-family:"Fraunces",serif; font-weight:900; font-size:20px; margin:0}
+.sec-sub{margin-left:auto; font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-soft)}
+.sec-body{padding:18px}
+.rule-note{border-left:3px solid var(--margin-red); padding-left:12px; color:var(--ink-soft); font-size:13px; margin:0 0 14px}
+/* Today tickets */
+.day-hero{display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px}
+.day-hero h3{font-family:"Fraunces",serif; font-size:32px; margin:0; line-height:1}
+.ticket{border:2px solid var(--ink); border-radius:8px; background:var(--paper-2); margin-bottom:10px; display:flex; gap:0; overflow:hidden; animation:slideIn .4s both; animation-delay:calc(var(--i,0)*45ms); transition:transform .16s ease, box-shadow .16s ease}
+.ticket:hover{transform:translate(-2px,-2px); box-shadow:var(--shadow-sm)}
+.ticket-time{font-family:"IBM Plex Mono",monospace; font-size:12px; padding:14px 12px; border-right:2px dashed var(--ink); min-width:86px; text-align:center; background:var(--paper)}
+.ticket-main{flex:1; padding:10px 12px}
+.ticket-main strong{font-family:"Fraunces",serif; font-size:17px}
+.ticket-code{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-soft)}
+.tri{display:flex; border-left:2px solid var(--ink)}
+.tri button{border:none; border-right:2px solid var(--ink); background:var(--paper); padding:0 14px; font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:13px; cursor:pointer; min-width:52px; transition:transform .12s ease, background .12s ease}
+.tri button:last-child{border-right:none}
+.tri button:active{transform:scale(.94)}
+.tri button.on-P{background:var(--accent); color:var(--accent-ink)}
+.tri button.on-A{background:var(--stamp-red); color:#fff}
+.tri button.on-C{background:var(--paper-3); color:var(--ink-soft); text-decoration:line-through}
+.stamp{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.12em; border:2px solid currentColor; border-radius:4px; padding:2px 7px; transform:rotate(-6deg); text-transform:uppercase}
+.stamp.bad{color:var(--stamp-red)} .stamp.good{color:var(--accent)} .stamp.warn{color:var(--amber)}
+@keyframes slideIn{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+@keyframes stampIn{0%{transform:scale(1.7) rotate(-10deg); opacity:0} 100%{transform:scale(1) rotate(-6deg); opacity:1}}
+.stamp-anim{animation:stampIn .18s cubic-bezier(.34,1.56,.64,1) both}
+.underline-meter{height:10px; border:2px solid var(--ink); border-radius:999px; overflow:hidden; background:var(--paper); margin-top:12px}
+.underline-meter i{display:block; height:100%; background:var(--ink); width:0; transition:width .6s cubic-bezier(.16,1,.3,1)}
+/* Subject cards */
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.card{border:2px solid var(--ink); border-radius:8px; background:var(--paper-2); box-shadow:3px 3px 0 var(--ink); padding:14px; position:relative; animation:slideIn .4s both; animation-delay:calc(var(--i,0)*45ms)}
+.card.danger{outline:3px solid var(--stamp-red); outline-offset:-3px}
+.card h4{font-family:"Fraunces",serif; margin:0; font-size:18px}
+.top-row{display:flex; justify-content:space-between; align-items:flex-start; gap:10px}
+.ring{width:62px; height:62px; flex:none}
+.ring .bg{stroke:var(--rule)} .ring .fg{stroke:var(--accent); transition:stroke-dashoffset .8s cubic-bezier(.16,1,.3,1), stroke .3s}
+.bigpct{font-family:"Fraunces",serif; font-weight:900; font-size:34px; line-height:1}
+.frac{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-soft)}
+.bunkline{font-family:"IBM Plex Mono",monospace; font-size:12.5px; margin:8px 0; padding:8px 10px; border:2px dashed var(--ink); border-radius:6px; background:var(--paper)}
+.dots{display:flex; gap:4px; margin:8px 0}
+.dots span{width:14px; height:14px; border:1.5px solid var(--ink); border-radius:3px; display:inline-block}
+.dots span.p{background:var(--accent)} .dots span.a{background:var(--stamp-red)} .dots span.c{background:var(--paper-3)}
+.stepper{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+/* ---- ledger coupon buttons — punched-tab identity, no retro gray ---- */
+.btn{
+  position:relative; display:inline-flex; align-items:center; gap:8px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; font-weight:600;
+  background:var(--paper-2); color:var(--ink);
+  border:2px solid var(--ink); border-radius:9px 9px 9px 3px;
+  padding:8px 14px 8px 12px; cursor:pointer;
+  box-shadow:3px 3px 0 var(--ink);
+  transition:transform .14s cubic-bezier(.34,1.56,.64,1), box-shadow .14s ease, background .14s ease;
+}
+.btn::before{content:""; width:9px; height:9px; border-radius:50%; background:var(--ink); border:2px solid var(--ink); flex:none; transition:transform .14s cubic-bezier(.34,1.56,.64,1)}
+.btn:hover{transform:translate(-1px,-1px); box-shadow:4px 4px 0 var(--ink)}
+.btn:hover::before{transform:scale(1.25)}
+.btn:active{transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink)}
+.btn:focus-visible{outline:3px solid var(--amber); outline-offset:2px}
+.btn.primary{background:var(--ink); color:var(--paper)}
+.btn.primary::before{background:var(--accent); border-color:var(--accent)}
+[data-theme="dark"] .btn.primary::before{background:var(--accent)}
+.btn.danger-ghost{color:var(--stamp-red); border-color:var(--stamp-red); box-shadow:3px 3px 0 var(--stamp-red)}
+.btn.danger-ghost::before{background:var(--stamp-red); border-color:var(--stamp-red)}
+.btn.small{padding:6px 10px 6px 9px; font-size:11.5px; box-shadow:2px 2px 0 var(--ink)}
+.btn.small:hover{box-shadow:3px 3px 0 var(--ink)}
+.btn.small:active{box-shadow:1px 1px 0 var(--ink)}
+.theme-btn{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; font-weight:600;
+  background:var(--paper-2); color:var(--ink);
+  border:2px solid var(--ink); border-radius:999px; padding:7px 13px 7px 10px; cursor:pointer;
+  box-shadow:2px 2px 0 var(--ink);
+  transition:transform .14s cubic-bezier(.34,1.56,.64,1), box-shadow .14s ease;
+}
+.theme-btn::before{content:""; width:10px; height:10px; border-radius:50%; background:var(--amber); border:2px solid var(--ink)}
+[data-theme="dark"] .theme-btn::before{background:var(--accent)}
+.theme-btn:hover{transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--ink)}
+.theme-btn:active{transform:translate(1px,1px); box-shadow:1px 1px 0 var(--ink)}
+.tri{display:flex; border-left:2px solid var(--ink); background:var(--paper-2)}
+.tri button{
+  font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:13px;
+  border:none; border-right:2px solid var(--ink); background:transparent; color:var(--ink-soft);
+  min-width:52px; padding:10px 0 8px; cursor:pointer; position:relative;
+  transition:background .13s ease, color .13s ease;
+}
+.tri button:last-child{border-right:none}
+.tri button::after{content:""; position:absolute; left:10px; right:10px; top:4px; height:3px; border-radius:99px; background:transparent}
+.tri button:hover{background:var(--paper-3); color:var(--ink)}
+.tri button:active{transform:scale(.96)}
+.tri button.on-P{background:var(--accent); color:var(--accent-ink)}
+.tri button.on-P::after{background:var(--accent-ink); opacity:.7}
+.tri button.on-A{background:var(--stamp-red); color:#fff}
+.tri button.on-A::after{background:#fff; opacity:.7}
+.tri button.on-C{background:var(--paper-3); color:var(--ink-soft); text-decoration:line-through}
+input[type=text],input[type=time],input[type=date],input[type=number],select{border:2px solid var(--ink); border-radius:6px; background:var(--paper); color:var(--ink); padding:8px 10px; font-family:"IBM Plex Mono",monospace; font-size:13px; width:100%}
+label.lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); display:block; margin:10px 0 4px}
+/* Planner */
+.planner{border-left:6px solid var(--margin-red)}
+input[type=range]{width:100%; accent-color:var(--stamp-red); height:32px}
+.proj{font-family:"IBM Plex Mono",monospace; font-size:15px; border:2px solid var(--ink); border-radius:6px; padding:10px 12px; background:var(--paper-2); margin-top:10px}
+/* Calendar */
+.cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:10px}
+.cal-grid .dow{font-family:"IBM Plex Mono",monospace; font-size:10.5px; text-align:center; color:var(--ink-soft)}
+.day{aspect-ratio:1; border:1.5px solid var(--ink); border-radius:5px; display:grid; place-items:center; font-family:"IBM Plex Mono",monospace; font-size:12px; cursor:pointer; background:var(--paper); color:var(--ink); padding:0; transition:transform .12s}
+@media(max-width:480px){
+  .ticket{flex-wrap:wrap}
+  .ticket-time{min-width:0; width:100%; border-right:none; border-bottom:2px dashed var(--ink); padding:8px}
+  .tri{width:100%; border-left:none; border-top:2px solid var(--ink)}
+  .tri button{flex:1; min-height:44px; padding:12px 0}
+  .cal-grid{gap:4px}
+  .day{aspect-ratio:auto; min-height:44px; font-size:13px}
+  .masthead{flex-wrap:wrap}
+  .bar span{font-size:10px}
+  .bar em{font-size:9.5px}
+}
+.day:hover{transform:scale(1.06)}
+.day.empty{border-style:dashed; opacity:.35; cursor:default}
+.day.has-P{background:var(--accent); color:var(--accent-ink); font-weight:700}
+.day.has-A{background:var(--stamp-red); color:#fff; font-weight:700}
+.day.has-M{box-shadow:inset 0 -5px 0 var(--amber)}
+.day.is-holiday{background:var(--paper-3); text-decoration:line-through; opacity:.7}
+.day.selected{outline:3px solid var(--ink); outline-offset:2px}
+/* Table + bars */
+table.ledger{width:100%; border-collapse:collapse; font-size:13px}
+table.ledger th{font-family:"IBM Plex Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:.08em; text-align:left; border-bottom:2px solid var(--ink); padding:8px 6px}
+table.ledger td{border-bottom:1px solid var(--rule); padding:8px 6px; font-family:"IBM Plex Mono",monospace}
+.bars{display:flex; align-items:flex-end; gap:10px; height:170px; border:2px solid var(--ink); border-radius:6px; padding:30px 10px 34px; background:var(--paper-2); margin-top:12px; overflow:visible}
+.bar{flex:1; background:var(--ink); border:2px solid var(--ink); border-radius:5px 5px 2px 2px; min-height:6px; position:relative; transition:height .6s cubic-bezier(.16,1,.3,1)}
+.bar.low{background:var(--stamp-red)} .bar.mid{background:var(--amber)} .bar.ok{background:var(--accent)}
+.bar span{position:absolute; top:-24px; left:50%; transform:translateX(-50%); font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600; white-space:nowrap; color:var(--ink); line-height:1.2}
+.bar em{position:absolute; bottom:-24px; left:50%; transform:translateX(-50%); font-style:normal; font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--ink-soft); white-space:nowrap}
+/* Setup modal */
+.overlay{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:100; display:none; align-items:center; justify-content:center; padding:18px}
+.overlay.open{display:flex}
+.sheet{background:var(--paper); border:2px solid var(--ink); border-radius:12px; box-shadow:8px 8px 0 #000; max-width:640px; width:100%; max-height:90vh; overflow:auto; padding:22px}
+.sheet h2{font-family:"Fraunces",serif; font-size:28px; margin:0 0 6px}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+@media(max-width:560px){.row2{grid-template-columns:1fr}}
+.tt-editor{border:2px dashed var(--ink); border-radius:8px; padding:10px; margin-top:10px}
+.tt-day{margin-bottom:10px; border-bottom:1px solid var(--rule); padding-bottom:8px}
+.tt-day b{font-family:"IBM Plex Mono",monospace; font-size:12px}
+.slot-row{display:flex; gap:6px; margin-top:6px}
+.slot-row input, .slot-row select{padding:6px}
+.toolbar{display:flex; gap:8px; flex-wrap:wrap; margin-top:14px}
+.alert{border:2px solid var(--stamp-red); background:color-mix(in srgb, var(--stamp-red) 12%, var(--paper)); padding:10px 12px; border-radius:6px; font-family:"IBM Plex Mono",monospace; font-size:12.5px; margin-bottom:12px}
+.okbox{border:2px solid var(--accent); padding:10px 12px; border-radius:6px; font-family:"IBM Plex Mono",monospace; font-size:12.5px; margin-bottom:12px}
+.kv{display:flex; gap:14px; flex-wrap:wrap; font-family:"IBM Plex Mono",monospace; font-size:12.5px}
+.kv div{border:2px solid var(--ink); border-radius:6px; padding:6px 10px; background:var(--paper-2)}
+.fab-bar{position:fixed; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:8px; z-index:60; background:var(--paper); border:2px solid var(--ink); border-radius:999px; padding:8px 10px; box-shadow:var(--shadow)}
+/* ---- pie charts + visual polish (ledger stays, charts are ink) ---- */
+.pie-wrap{display:grid; grid-template-columns:220px 1fr; gap:16px; align-items:center; margin-top:14px; border:2px solid var(--ink); border-radius:8px; background:var(--paper-2); padding:14px}
+@media(max-width:640px){.pie-wrap{grid-template-columns:1fr}}
+.pie-big{width:200px; height:200px; margin:0 auto; position:relative}
+.pie-big svg{transform:rotate(-90deg)}
+.pie-center{position:absolute; inset:0; display:grid; place-items:center; text-align:center}
+.pie-center b{font-family:"Fraunces",serif; font-size:30px; line-height:1}
+.pie-legend{display:flex; flex-direction:column; gap:8px; font-family:"IBM Plex Mono",monospace; font-size:12.5px}
+.leg-row{display:flex; align-items:center; gap:8px; border:2px solid var(--ink); border-radius:6px; padding:6px 10px; background:var(--paper)}
+.swatch{width:14px; height:14px; border:2px solid var(--ink); flex:none}
+.mini-pies{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:12px}
+.mini-pie{border:2px solid var(--ink); border-radius:8px; background:var(--paper); padding:10px; display:flex; gap:10px; align-items:center; animation:slideIn .4s both; animation-delay:calc(var(--i,0)*50ms)}
+.mini-pie svg{flex:none}
+.dither-line{height:8px; background:repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 10px); opacity:.18; border-radius:99px; margin:12px 0 0}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01ms!important; transition-duration:.01ms!important} html{scroll-behavior:auto}}
+:focus-visible{outline:3px solid var(--amber); outline-offset:2px}
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div>
+    <div class="brand-kicker">ATTENDANCE LEDGER • <span id="year">2025–26</span> • <span id="streakLine" class="mono">0-day streak</span></div>
+    <input id="collegeInput" class="brand-name" value="My College" aria-label="College name">
+  </div>
+  <div class="seal">
+    <div class="seal-ring" title="Overall attendance"><b id="overallSeal">–%</b></div>
+    <button class="theme-btn" id="themeBtn" aria-label="Toggle theme">◐ theme</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="alertZone" style="margin-top:16px"></div>
+
+  <section class="sec" id="sec-today">
+    <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">Today — mark each class</h2><span class="sec-sub mono" id="todaySub"></span></div>
+    <div class="sec-body">
+      <div class="day-hero">
+        <h3 id="todayDate">—</h3>
+        <div>
+          <input type="date" id="datePicker" aria-label="Choose date to mark">
+        </div>
+      </div>
+      <p class="rule-note">Totally manual. Pick a date, tap <b>P</b> present, <b>A</b> absent, <b>✕</b> cancelled. Cancelled + holidays never count. Sunday off by default — change below.</p>
+      <div id="todayList"></div>
+      <div class="underline-meter" aria-hidden="true"><i id="todayMeter"></i></div>
+      <div class="toolbar">
+        <button class="btn small" id="markAllP">Mark all present ✓</button>
+        <button class="btn small" id="clearDay">Clear day ○</button>
+        <button class="btn small" id="holidayBtn">Toggle holiday for this date</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="sec-subjects">
+    <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">Subjects register</h2><span class="sec-sub mono" id="overallLine"></span></div>
+    <div class="sec-body">
+      <div id="shortageBox"></div>
+      <div class="grid2" id="subjectGrid"></div>
+      <div class="toolbar">
+        <button class="btn primary" id="addSubjectBtn">+ Add subject</button>
+        <button class="btn" id="editTTBtn">▦ Timetable</button>
+        <button class="btn" id="resetSemBtn">↺ New semester</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec planner" id="sec-planner">
+    <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">Bunk planner — “can I skip?”</h2><span class="sec-sub mono">margin math</span></div>
+    <div class="sec-body">
+      <div class="row2">
+        <div><label class="lbl" for="planSubject">Subject</label><select id="planSubject"></select></div>
+        <div><label class="lbl" for="planTarget">Requirement % for this plan</label><select id="planTarget"><option>65</option><option selected>75</option><option>80</option><option>85</option></select></div>
+      </div>
+      <label class="lbl" for="planRange">Future bunks to take: <span id="planN" class="mono">0</span></label>
+      <input type="range" id="planRange" min="0" max="12" value="0">
+      <div class="proj" id="planOut">—</div>
+      <div id="planVerdict" style="margin-top:10px"></div>
+      <p class="rule-note" style="margin-top:12px">Maths: safe bunks = ⌊(present − r·total) / r⌋ · recovery = ⌈(r·total − present)/(1−r)⌉ · projection = present/(total+n). Same formula Bunkr / Attendly use.</p>
+    </div>
+  </section>
+
+  <section class="sec" id="sec-cal">
+    <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">Month ledger</h2><span class="sec-sub mono" id="calLabel"></span></div>
+    <div class="sec-body">
+      <div class="toolbar" style="margin-top:0">
+        <button class="btn small" id="prevM">← prev</button>
+        <button class="btn small" id="thisM">this month</button>
+        <button class="btn small" id="nextM">next →</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="proj" id="dayDetail" style="margin-top:12px">Pick a day to inspect its ledger entry.</div>
+    </div>
+  </section>
+
+  <section class="sec" id="sec-stats">
+    <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">Records &amp; standing</h2><span class="sec-sub mono">pies + ink bars</span></div>
+    <div class="sec-body">
+      <div class="kv" id="statBoxes"></div>
+      <div class="pie-wrap">
+        <div class="pie-big" id="overallPie"></div>
+        <div class="pie-legend" id="pieLegend"></div>
+      </div>
+      <div class="mini-pies" id="miniPies"></div>
+      <div class="dither-line"></div>
+      <div class="bars" id="bars"></div>
+      <div style="overflow:auto; margin-top:14px; border:2px solid var(--ink); border-radius:6px">
+        <table class="ledger"><thead><tr><th>Subject</th><th>Att</th><th>Held</th><th>%</th><th>Safe bunk</th><th>Must attend</th></tr></thead><tbody id="ledgerRows"></tbody></table>
+      </div>
+      <div class="toolbar">
+        <button class="btn" id="exportCsv">⤓ CSV</button>
+        <button class="btn" id="copySummary">⧉ Copy summary</button>
+        <button class="btn" id="backupBtn">JSON backup</button>
+        <button class="btn" id="restoreBtn">Restore</button>
+        <input type="file" id="restoreFile" accept="application/json" hidden>
+      </div>
+    </div>
+  </section>
+
+  <p class="mono" style="text-align:center; color:var(--ink-soft); font-size:11.5px; margin-top:26px">OFFLINE • LOCALSTORAGE <span id="storeKey">ledger_v1</span> • NO LOGIN • FORMULAE IN §03 • BUILT AS ONE FILE</p>
+</div>
+
+<div class="fab-bar">
+  <button class="btn small primary" onclick="document.getElementById('sec-today').scrollIntoView()">Today</button>
+  <button class="btn small" onclick="document.getElementById('sec-subjects').scrollIntoView()">Subjects</button>
+  <button class="btn small" onclick="document.getElementById('sec-planner').scrollIntoView()">Bunk?</button>
+  <button class="btn small" onclick="document.getElementById('sec-cal').scrollIntoView()">Month</button>
+</div>
+
+<div class="overlay" id="subjectModal">
+  <div class="sheet">
+    <h2 id="subjModalTitle">Add subject</h2>
+    <p class="rule-note">Name + code + prior counts if joining mid-sem. Prior counts seed the maths.</p>
+    <label class="lbl">Subject name</label><input type="text" id="f_name" placeholder="e.g. Data Structures">
+    <div class="row2">
+      <div><label class="lbl">Code</label><input type="text" id="f_code" placeholder="CS201"></div>
+      <div><label class="lbl">Type</label><select id="f_type"><option>Lecture</option><option>Lab</option><option>Tutorial</option></select></div>
+    </div>
+    <div class="row2">
+      <div><label class="lbl">Already held (prior)</label><input type="number" id="f_total" value="0" min="0"></div>
+      <div><label class="lbl">Already attended (prior)</label><input type="number" id="f_present" value="0" min="0"></div>
+    </div>
+    <div class="row2">
+      <div><label class="lbl">Requirement % (per subject)</label><select id="f_target"><option>65</option><option selected>75</option><option>80</option><option>85</option></select></div>
+      <div><label class="lbl">Credits / weight</label><input type="number" id="f_periods" value="1" min="1" title="Reserved for future weighted %"></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn primary" id="saveSubject">Enter in ledger →</button>
+      <button class="btn" id="closeSubject">Cancel</button>
+      <button class="btn danger-ghost" id="deleteSubject" style="display:none">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ttModal">
+  <div class="sheet">
+    <h2>Weekly timetable</h2>
+    <p class="rule-note">Map each weekday to its classes in order. Time is a label — marking is per row, per date. Leave a day empty for no class. Sunday ticked off by default.</p>
+    <label class="lbl">Weekly off days</label>
+    <div id="offDays" style="display:flex; gap:6px; flex-wrap:wrap"></div>
+    <div id="ttEditor"></div>
+    <label class="lbl">Holidays (comma dates YYYY-MM-DD)</label>
+    <input type="text" id="holidaysInput" placeholder="2026-10-02, 2026-12-25">
+    <div class="toolbar">
+      <button class="btn primary" id="saveTT">Save timetable →</button>
+      <button class="btn" id="closeTT">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const KEY="ledger_v1";
+const DAYS=["MON","TUE","WED","THU","FRI","SAT","SUN"];
+const DAYIDX={MON:1,TUE:2,WED:3,THU:4,FRI:5,SAT:6,SUN:0};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const iso=d=>{const p=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())};
+const parseISO=s=>{const[a,b,c]=String(s||"").split("-").map(Number);return new Date(a||1970,(b||1)-1,c||1)};
+const fmtD=d=>d.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const csvCell=v=>{const s=String(v==null?"":v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+function defState(){return{college:"My College",target:75,theme:"light",subjects:[],timetable:{MON:[],TUE:[],WED:[],THU:[],FRI:[],SAT:[],SUN:[]},off:[0],holidays:[],logs:{},undoStack:[],calCursor:iso(new Date()),selectedDate:iso(new Date())}}
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))||defState()}catch{S=defState()}
+if(!S||!S.subjects) S=defState();
+ensureSlotIds(); migrateOldLogs(); validateState();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){console.warn("save failed",e)}}
+function ensureSlotIds(){for(const d of DAYS){for(const sl of (S.timetable[d]||[])){if(!sl.id) sl.id=uid()}}}
+function migrateOldLogs(){
+  // v0 keys were date#index (fragile). Migrate to date#slotId where possible.
+  const names=["SUN","MON","TUE","WED","THU","FRI","SAT"];
+  for(const k of Object.keys(S.logs)){
+    const parts=String(k).split("#"); if(parts.length!==2) continue;
+    const ds=parts[0], idx=Number(parts[1]);
+    if(!Number.isInteger(idx)) continue; // already slot-id form
+    const d=parseISO(ds); const daySlots=S.timetable[names[d.getDay()]]||[];
+    const sl=daySlots[idx];
+    if(sl&&sl.id){const nk=ds+"#"+sl.id; if(!S.logs[nk]) S.logs[nk]=S.logs[k];}
+    delete S.logs[k];
+  }
+}
+function validateState(){
+  if(!S||typeof S!=="object") S=defState();
+  if(!Array.isArray(S.subjects)) S.subjects=[];
+  if(!S.timetable||typeof S.timetable!=="object") S.timetable=defState().timetable;
+  for(const d of DAYS){if(!Array.isArray(S.timetable[d])) S.timetable[d]=[]}
+  if(!Array.isArray(S.off)) S.off=[0];
+  S.off=S.off.filter(n=>Number.isInteger(n)&&n>=0&&n<=6);
+  if(!Array.isArray(S.holidays)) S.holidays=[];
+  S.holidays=S.holidays.filter(s=>/^\d{4}-\d{2}-\d{2}$/.test(s));
+  if(!S.logs||typeof S.logs!=="object") S.logs={};
+  for(const k of Object.keys(S.logs)){const r=S.logs[k];
+    if(!r||typeof r!=="object"||!["present","absent","cancelled"].includes(r.status)||!subj(r.subjectId)){delete S.logs[k];continue}
+    const ds=String(k).split("#")[0]; if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)){delete S.logs[k]}
+  }
+  S.subjects.forEach(s=>{
+    s.baseTotal=Math.max(0,Math.floor(+s.baseTotal||0));
+    s.basePresent=Math.min(s.baseTotal,Math.max(0,Math.floor(+s.basePresent||0)));
+    const t=+s.target||S.target||75; s.target=Math.min(100,Math.max(1,t));
+    if(typeof s.name!=="string") s.name="Untitled"; if(typeof s.code!=="string") s.code="SUB";
+  });
+  if(!Array.isArray(S.undoStack)) S.undoStack=[];
+  if(S.theme!=="dark"&&S.theme!=="light") S.theme="light";
+  ensureSlotIds();
+}
+function subj(id){return S.subjects.find(s=>s.id===id)}
+function logKey(date,slotId){return date+"#"+slotId}
+function slotIdOf(sl,i){return sl.id||String(i)}
+function slotsFor(dateStr){const d=parseISO(dateStr);const names=["SUN","MON","TUE","WED","THU","FRI","SAT"];return S.timetable[names[d.getDay()]]||[]}
+function isHoliday(dateStr){return S.holidays.includes(dateStr)||S.off.includes(parseISO(dateStr).getDay())}
+function statsFor(sub){
+  let tot=sub.baseTotal||0, pre=sub.basePresent||0;
+  for(const k in S.logs){const rec=S.logs[k]; if(rec.subjectId!==sub.id) continue; if(rec.status==="cancelled") continue;
+    const ds=String(k).split("#")[0]; if(S.holidays.includes(ds)) continue; // holiday logs never count
+    if(rec.status==="present"){tot++;pre++} else if(rec.status==="absent"){tot++}}
+  const pct=tot?pre/tot*100:0;
+  const r=(sub.target||S.target||75)/100;
+  let safe=0,need=0;
+  if(pct/100>=r-1e-9){safe=Math.max(0,Math.floor((pre-r*tot)/r+1e-9))}else{need=Math.max(0,Math.ceil((r*tot-pre)/(1-r)-1e-9))}
+  return{tot,pre,pct,safe,need,r}
+}
+function overall(){let t=0,p=0;S.subjects.forEach(s=>{const st=statsFor(s);t+=st.tot;p+=st.pre});return{t,p,pct:t?p/t*100:0}}
+function eligible(){return S.subjects.every(s=>statsFor(s).pct>=(s.target||S.target||75)-1e-9)}
+/* ---------- TODAY ---------- */
+const $=id=>document.getElementById(id);
+function renderToday(){
+  const date=S.selectedDate;
+  $("datePicker").value=date;
+  const d=parseISO(date);
+  $("todayDate").textContent=fmtD(d);
+  $("todaySub").textContent=date+(isHoliday(date)?" • HOLIDAY — marking locked":" • "+slotsFor(date).length+" classes");
+  const slots=slotsFor(date);
+  const box=$("todayList"); box.innerHTML="";
+  if(isHoliday(date)){box.innerHTML='<div class="okbox">Holiday / weekly off — no classes counted. Untick in Timetable to resume.</div>'}
+  else if(!slots.length){box.innerHTML='<div class="okbox">No classes this day. Add them in ▦ Timetable.</div>'}
+  slots.forEach((sl,i)=>{
+    if(!sl.id) sl.id=uid();
+    const s=subj(sl.subjectId); if(!s) return;
+    const k=logKey(date,slotIdOf(sl,i));
+    const st=S.logs[k]?.status||"";
+    const sst=statsFor(s);
+    const afterSkip=sst.tot?((sst.pre/(sst.tot+1))*100).toFixed(1):"0.0";
+    const el=document.createElement("div"); el.className="ticket"; el.style.setProperty("--i",i);
+    el.innerHTML=`<div class="ticket-time">${esc(sl.time||"--:--")}<br><span style="opacity:.6">${DAYS[(parseISO(date).getDay()+6)%7]}</span></div>
+      <div class="ticket-main"><strong>${esc(s.name)}</strong> <span class="ticket-code">${esc(s.code)} • ${sst.pct.toFixed(1)}% • skip→${afterSkip}%</span><br>
+      <span class="stamp ${st==="absent"?"bad":st==="present"?"good":""} ${st?"stamp-anim":""}" style="${st?"":"opacity:.35"}">${st==="present"?"✓ present":st==="absent"?"✕ absent":st==="cancelled"?"— cancelled":"○ unmarked"}</span></div>
+      <div class="tri" role="group" aria-label="mark ${esc(s.name)}">
+        <button class="${st==="present"?"on-P":""}" data-a="present" title="Present" aria-pressed="${st==="present"}">P</button>
+        <button class="${st==="absent"?"on-A":""}" data-a="absent" title="Absent" aria-pressed="${st==="absent"}">A</button>
+        <button class="${st==="cancelled"?"on-C":""}" data-a="cancelled" title="Cancelled — excluded" aria-pressed="${st==="cancelled"}">✕</button>
+      </div>`;
+    el.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+      if(S.logs[k]?.status===b.dataset.a) delete S.logs[k];
+      else S.logs[k]={subjectId:sl.subjectId,status:b.dataset.a};
+      save(); renderAll();
+    });
+    box.appendChild(el);
+  });
+  const marked=slots.filter((sl,i)=>S.logs[logKey(date,slotIdOf(sl,i))]).length;
+  $("todayMeter").style.width=slots.length?(marked/slots.length*100)+"%":"0";
+}
+/* ---------- SUBJECTS ---------- */
+function ringSVG(pct){
+  const C=2*Math.PI*26; const off=C*(1-Math.min(100,Math.max(0,pct))/100);
+  const col=pct>=75?"var(--accent)":pct>=60?"var(--amber)":"var(--stamp-red)";
+  return `<svg class="ring" viewBox="0 0 64 64"><circle class="bg" cx="32" cy="32" r="26" fill="none" stroke-width="6"/><circle class="fg" cx="32" cy="32" r="26" fill="none" stroke-width="6" stroke="${col}" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-size="13" font-family="IBM Plex Mono" font-weight="600" fill="var(--ink)">${Math.round(pct)}</text></svg>`;
+}
+function renderSubjects(){
+  const o=overall();
+  $("overallSeal").textContent=Math.round(o.pct)+"%";
+  $("overallLine").textContent=`overall ${o.pre}/${o.t} • ${o.pct.toFixed(1)}% • need ${S.target}% ${eligible()?"✓ ELIGIBLE":"✕ SHORT"}`;
+  document.title=`${Math.round(o.pct)}% — Attendance Ledger`;
+  const az=$("alertZone"); az.innerHTML="";
+  const low=S.subjects.filter(s=>statsFor(s).pct<(s.target||S.target));
+  if(low.length){const d=document.createElement("div");d.className="alert";d.setAttribute("role","alert");d.innerHTML=`⚠ SHORTAGE — ${low.map(s=>`${esc(s.code)} ${statsFor(s).pct.toFixed(1)}% (attend next ${statsFor(s).need})`).join(" · ")}`;az.appendChild(d)}
+  const g=$("subjectGrid"); g.innerHTML="";
+  S.subjects.forEach((s,i)=>{
+    const st=statsFor(s);
+    const recent=Object.entries(S.logs).filter(([k,v])=>v.subjectId===s.id).sort().slice(-10);
+    const card=document.createElement("div"); card.className="card"+(st.pct<(s.target||S.target)?" danger":""); card.style.setProperty("--i",i);
+    card.innerHTML=`<div class="top-row"><div><div class="mono" style="font-size:11px;color:var(--ink-soft)">${esc(s.code)} • ${esc(s.type)} • req ${s.target||S.target}%</div><h4>${esc(s.name)}</h4></div>${ringSVG(st.pct)}</div>
+      <div class="bigpct" data-count="${st.pct.toFixed(1)}">${st.pct.toFixed(1)}%</div>
+      <div class="frac">${st.pre} attended / ${st.tot} held</div>
+      <div class="bunkline">${st.safe>0?`✓ can bunk <b>${st.safe}</b> more`:`✕ bunk 0 — attend next <b>${st.need}</b>`} · <span style="opacity:.7">tap ± to correct</span></div>
+      <div class="dots">${recent.map(([k,v])=>`<span class="${v.status==="present"?"p":v.status==="absent"?"a":"c"}" title="${k} ${v.status}"></span>`).join("")||'<span style="border-style:dashed"></span>'.repeat(0)}</div>
+      <div class="stepper">
+        <button class="btn small" data-op="p">+ present</button>
+        <button class="btn small" data-op="a">+ absent</button>
+        <button class="btn small" data-op="u">↩ undo</button>
+        <button class="btn small" data-op="e">✎ edit</button>
+      </div>`;
+    card.querySelector('[data-op="p"]').onclick=()=>{s.baseTotal++;s.basePresent++;S.undoStack.push({sub:s.id,op:"p"});if(S.undoStack.length>200)S.undoStack.shift();save();renderAll()};
+    card.querySelector('[data-op="a"]').onclick=()=>{s.baseTotal++;S.undoStack.push({sub:s.id,op:"a"});if(S.undoStack.length>200)S.undoStack.shift();save();renderAll()};
+    card.querySelector('[data-op="u"]').onclick=()=>{
+      const last=[...S.undoStack].reverse().find(e=>e.sub===s.id);
+      if(last){S.undoStack.splice(S.undoStack.lastIndexOf(last),1);
+        if(s.baseTotal>0){s.baseTotal--;if(last.op==="p")s.basePresent=Math.max(0,s.basePresent-1);}
+      }else if(s.baseTotal>0){s.baseTotal--;s.basePresent=Math.min(s.basePresent,s.baseTotal);}
+      save();renderAll()};
+    card.querySelector('[data-op="e"]').onclick=()=>openSubject(s.id);
+    g.appendChild(card);
+  });
+  // streak: start from yesterday if today unmarked; skip cancelled-only + holidays
+  let streak=0; const d0=new Date();
+  const todayISO=iso(d0);
+  const tSlots=slotsFor(todayISO);
+  const tSts=tSlots.map(sl=>S.logs[logKey(todayISO,slotIdOf(sl,tSlots.indexOf(sl)))]?.status);
+  const startOff=(tSlots.length&&tSts.every(x=>!x))?1:0;
+  for(let k=startOff;k<400;k++){const dt=new Date(d0);dt.setDate(dt.getDate()-k);const ds=iso(dt);
+    if(isHoliday(ds)) continue; const sl=slotsFor(ds); if(!sl.length) continue;
+    const sts=sl.map(s2=>S.logs[logKey(ds,slotIdOf(s2,sl.indexOf(s2)))]?.status);
+    if(sts.every(x=>!x||x==="cancelled")){if(sts.every(x=>!x))break;continue}
+    if(sts.every(x=>x==="present"||x==="cancelled")&&sts.some(x=>x==="present")) streak++;
+    else break;
+  }
+  $("streakLine").textContent=streak+"-day streak";
+}
+/* ---------- PLANNER ---------- */
+function renderPlanner(){
+  const sel=$("planSubject"); const keep=sel.value;
+  sel.innerHTML=S.subjects.map(s=>`<option value="${s.id}">${esc(s.code)} — ${esc(s.name)}</option>`).join("");
+  if(keep&&subj(keep)) sel.value=keep;
+  const id=sel.value||S.subjects[0]?.id; if(id) sel.value=id;
+  const s=subj(id); if(!s){$("planOut").textContent="Add a subject first.";return}
+  if(!$("planTarget").dataset.touched) $("planTarget").value=String(s.target||S.target||75);
+  const r=Number($("planTarget").value||s.target||75)/100;
+  const n=Number($("planRange").value); $("planN").textContent=n;
+  const st=statsFor(s);
+  const projPct=(st.pre/(st.tot+n)*100)||0;
+  // recompute safe with chosen r
+  const pct=st.tot?st.pre/st.tot*100:0;
+  let safe=pct/100>=r-1e-9?Math.max(0,Math.floor((st.pre-r*st.tot)/r+1e-9)):0;
+  let need=pct/100>=r-1e-9?0:Math.max(0,Math.ceil((r*st.tot-st.pre)/(1-r)-1e-9));
+  $("planOut").textContent=`${s.code}: now ${pct.toFixed(1)}% (${st.pre}/${st.tot}) → after ${n} bunk${n===1?"":"s"} ≈ ${(st.tot+n?st.pre/(st.tot+n)*100:0).toFixed(1)}%`;
+  const v=$("planVerdict");
+  if(n<=safe&&pct/100>=r){v.innerHTML=`<span class="stamp good stamp-anim">✓ SAFE — ${safe-n} bunks left after this</span>`}
+  else if(pct/100<r){v.innerHTML=`<span class="stamp bad stamp-anim">✕ ALREADY SHORT — attend next ${need} to reach ${(r*100)}%</span>`}
+  else{v.innerHTML=`<span class="stamp bad stamp-anim">✕ UNSAFE — only ${safe} safe, you asked ${n}</span>`}
+}
+/* ---------- CALENDAR ---------- */
+function renderCal(){
+  const cur=parseISO(S.calCursor||iso(new Date())); cur.setDate(1);
+  $("calLabel").textContent=cur.toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+  const g=$("calGrid"); g.innerHTML="";
+  ["Mo","Tu","We","Th","Fr","Sa","Su"].forEach(d=>{const e=document.createElement("div");e.className="dow";e.textContent=d;g.appendChild(e)});
+  const start=(cur.getDay()+6)%7;
+  for(let i=0;i<start;i++){const e=document.createElement("div");e.className="day empty";g.appendChild(e)}
+  const y=cur.getFullYear(),m=cur.getMonth();
+  const days=new Date(y,m+1,0).getDate();
+  for(let d=1;d<=days;d++){
+    const dt=new Date(y,m,d), ds=iso(dt);
+    const el=document.createElement("button"); el.className="day"; el.textContent=d; el.type="button";
+    const sl=slotsFor(ds);
+    const sts=sl.map(s2=>S.logs[logKey(ds,slotIdOf(s2,sl.indexOf(s2)))]?.status);
+    if(isHoliday(ds)) el.classList.add("is-holiday");
+    else if(sts.length&&sts.some(Boolean)){
+      if(sts.includes("absent")) el.classList.add("has-A");
+      else if(sts.every(x=>!x||x==="cancelled")){} else el.classList.add("has-P");
+      if(sts.includes("present")&&sts.includes("absent")) el.classList.add("has-M");
+    }
+    if(ds===S.selectedDate) el.classList.add("selected");
+    el.setAttribute("aria-label",ds+" "+(sl.length?sl.length+" classes":"no classes"));
+    el.onclick=()=>{S.selectedDate=ds;S.calCursor=ds.slice(0,7)+"-01";save();renderAll()};
+    g.appendChild(el);
+  }
+  showDay(S.selectedDate);
+}
+function showDay(ds){
+  const sl=slotsFor(ds);
+  const sts=sl.map(s2=>{const r=S.logs[logKey(ds,slotIdOf(s2,sl.indexOf(s2)))];return r?`${subj(r.subjectId)?.code||"?"}:${r.status}`:"—"});
+  const isF=ds>iso(new Date());
+  $("dayDetail").textContent=`${ds}${isF?" (FUTURE)":""} ${isHoliday(ds)?"(holiday — excluded)":""} • ${sl.length} scheduled → `+(sts.join(" · ")||"no classes");
+}
+/* ---------- STATS ---------- */
+const PALETTE=["#0E4D3C","#B7791F","#C1272D","#2F5D9A","#7A4E9E","#0E7C7B","#A85B2A","#5B6B7A"];
+const colorFor=i=>PALETTE[i%PALETTE.length];
+function donutSVG(pct,size,thick,color){
+  const r=(size-thick)/2, C=2*Math.PI*r;
+  const off=C*(1-Math.min(100,Math.max(0,pct))/100);
+  const col=color||(pct>=75?"var(--accent)":pct>=60?"var(--amber)":"var(--stamp-red)");
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--rule)" stroke-width="${thick}"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${col}" stroke-width="${thick}" stroke-linecap="butt" stroke-dasharray="${C}" stroke-dashoffset="${off}" style="transition:stroke-dashoffset .7s cubic-bezier(.16,1,.3,1)"/></svg>`;
+}
+function multiPieSVG(segs,size,thick){
+  const r=(size-thick)/2, C=2*Math.PI*r, t=segs.reduce((a,s)=>a+s.value,0)||1;
+  let acc=0;
+  const circles=segs.map(s=>{
+    const len=C*s.value/t, off=-acc*C/t;
+    acc+=s.value;
+    return `<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${s.color}" stroke-width="${thick}" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" stroke-linecap="butt"/>`;
+  }).join("");
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)">${circles}</svg>`;
+}
+function renderStats(){
+  const o=overall();
+  $("statBoxes").innerHTML=`<div>Held <b>${o.t}</b></div><div>Attended <b>${o.p}</b></div><div>Missed <b>${o.t-o.p}</b></div><div>Overall <b>${o.pct.toFixed(1)}%</b></div><div>${eligible()?"✓ ELIGIBLE":"✕ NOT ELIGIBLE"}</div>`;
+  // overall pie: per-subject attended slices in distinct inks + missed in pale rule
+  const missed=o.t-o.p;
+  const segs=S.subjects.map((s,i)=>({value:statsFor(s).pre,color:colorFor(i)})).filter(s=>s.value>0);
+  if(missed>0) segs.push({value:missed,color:"var(--rule)"});
+  if(!segs.length) segs.push({value:1,color:"var(--rule)"});
+  $("overallPie").innerHTML=`${multiPieSVG(segs,200,26)}<div class="pie-center"><div><b>${o.pct.toFixed(1)}%</b><br><span class="mono" style="font-size:11px">${o.p}/${o.t} classes</span></div></div>`;
+  $("pieLegend").innerHTML=
+    S.subjects.map((s,i)=>{const st=statsFor(s);
+      return `<div class="leg-row"><span class="swatch" style="background:${colorFor(i)}"></span> ${esc(s.code)} — <b>${st.pre}</b> att (${st.pct.toFixed(1)}%)</div>`}).join("")+
+    `<div class="leg-row"><span class="swatch" style="background:var(--rule)"></span> Missed — <b>${missed}</b></div>
+    <div class="leg-row">⚖ Requirement <b>${S.target}%</b> — ${eligible()?"<span class='stamp good'>✓ ELIGIBLE</span>":"<span class='stamp bad'>✕ SHORT</span>"}</div>`;
+  // mini pies per subject — each in its own ink
+  const mp=$("miniPies"); mp.innerHTML="";
+  S.subjects.forEach((s,i)=>{
+    const st=statsFor(s);
+    const d=document.createElement("div"); d.className="mini-pie"; d.style.setProperty("--i",i);
+    d.style.borderTop=`6px solid ${colorFor(i)}`;
+    d.innerHTML=`${donutSVG(st.pct,54,10,colorFor(i))}<div><div class="mono" style="font-size:11px;color:var(--ink-soft)">${esc(s.code)}</div><div style="font-family:Fraunces,serif;font-weight:700">${st.pct.toFixed(1)}%</div><div class="mono" style="font-size:11px">${st.pre}/${st.tot} · bunk ${st.safe}</div></div>`;
+    mp.appendChild(d);
+  });
+  const b=$("bars"); b.innerHTML="";
+  S.subjects.forEach((s,i)=>{const st=statsFor(s);const h=Math.max(4,Math.min(100,st.pct));
+    const d=document.createElement("div");d.className="bar";d.style.height=h+"%";d.style.background=colorFor(i);
+    d.innerHTML=`<span>${st.pct.toFixed(0)}%</span><em>${esc(s.code)}</em>`;d.title=`${s.name} ${st.pct.toFixed(1)}%`;b.appendChild(d)});
+  $("ledgerRows").innerHTML=S.subjects.map(s=>{const st=statsFor(s);
+    return `<tr><td>${esc(s.code)}</td><td>${st.pre}</td><td>${st.tot}</td><td>${st.pct.toFixed(1)}%</td><td>${st.safe}</td><td>${st.need}</td></tr>`}).join("");
+}
+function renderAll(){
+  document.documentElement.dataset.theme=S.theme||"light";
+  const tb=$("themeBtn"); if(tb) tb.textContent=(S.theme==="dark"?"☾ dark":"◐ light");
+  save();renderToday();renderSubjects();renderPlanner();renderCal();renderStats();
+  $("collegeInput").value=S.college||"My College";
+}
+/* ---------- EVENTS ---------- */
+$("datePicker").onchange=e=>{S.selectedDate=e.target.value||iso(new Date());S.calCursor=S.selectedDate.slice(0,7)+"-01";save();renderAll()};
+$("markAllP").onclick=()=>{if(isHoliday(S.selectedDate)){alert("Holiday — marking is locked for this date.");return}slotsFor(S.selectedDate).forEach((sl,i)=>{S.logs[logKey(S.selectedDate,slotIdOf(sl,i))]={subjectId:sl.subjectId,status:"present"}});save();renderAll()};
+$("clearDay").onclick=()=>{slotsFor(S.selectedDate).forEach((sl,i)=>delete S.logs[logKey(S.selectedDate,slotIdOf(sl,i))]);save();renderAll()};
+$("holidayBtn").onclick=()=>{const d=S.selectedDate;const ix=S.holidays.indexOf(d);if(ix>=0)S.holidays.splice(ix,1);else{if(slotsFor(d).some((sl,i)=>S.logs[logKey(d,slotIdOf(sl,i))])&&!confirm("Holiday will exclude existing marks on this date from maths. Continue?"))return;S.holidays.push(d)}save();renderAll()};
+$("themeBtn").onclick=()=>{S.theme=document.documentElement.dataset.theme==="dark"?"light":"dark";save();renderAll()};
+let collegeT=null;
+$("collegeInput").oninput=e=>{S.college=e.target.value;clearTimeout(collegeT);collegeT=setTimeout(save,300)};
+$("planRange").oninput=renderPlanner;
+$("planSubject").onchange=e=>{e.target.dataset.touched="1";const s=subj(e.target.value);if(s) $("planTarget").value=String(s.target||S.target||75);renderPlanner()};
+$("planTarget").onchange=e=>{e.target.dataset.touched="1";renderPlanner()};
+$("prevM").onclick=()=>{const d=parseISO(S.calCursor);d.setMonth(d.getMonth()-1);S.calCursor=iso(d);save();renderCal()};
+$("nextM").onclick=()=>{const d=parseISO(S.calCursor);d.setMonth(d.getMonth()+1);S.calCursor=iso(d);save();renderCal()};
+$("thisM").onclick=()=>{S.calCursor=iso(new Date());save();renderCal()};
+/* subjects modal */
+let editing=null;
+function openSubject(id){
+  editing=id||null;
+  $("subjModalTitle").textContent=id?"Edit subject":"Add subject";
+  $("deleteSubject").style.display=id?"":"none";
+  const s=id?subj(id):{name:"",code:"",type:"Lecture",baseTotal:0,basePresent:0,target:S.target||75};
+  $("f_name").value=s.name||"";$("f_code").value=s.code||"";$("f_type").value=s.type||"Lecture";
+  $("f_total").value=s.baseTotal||0;$("f_present").value=s.basePresent||0;$("f_target").value=s.target||S.target||75;
+  $("subjectModal").classList.add("open");
+}
+$("addSubjectBtn").onclick=()=>openSubject(null);
+$("closeSubject").onclick=()=>$("subjectModal").classList.remove("open");
+$("saveSubject").onclick=()=>{
+  const n=$("f_name").value.trim()||"Untitled", c=$("f_code").value.trim()||"SUB";
+  const t=Math.max(0,+$("f_total").value||0), p=Math.min(t,Math.max(0,+$("f_present").value||0));
+  if(editing){Object.assign(subj(editing),{name:n,code:c,type:$("f_type").value,baseTotal:t,basePresent:p,target:+$("f_target").value})}
+  else S.subjects.push({id:uid(),name:n,code:c,type:$("f_type").value,baseTotal:t,basePresent:p,target:+$("f_target").value});
+  $("subjectModal").classList.remove("open");save();renderAll();
+};
+$("deleteSubject").onclick=()=>{if(!editing)return;if(!confirm("Delete this subject + its timetable slots + marks?"))return;S.subjects=S.subjects.filter(s=>s.id!==editing);
+  for(const tt of Object.values(S.timetable))for(let i=tt.length-1;i>=0;i--)if(tt[i].subjectId===editing)tt.splice(i,1);
+  for(const k of Object.keys(S.logs))if(S.logs[k].subjectId===editing)delete S.logs[k];
+  $("subjectModal").classList.remove("open");editing=null;save();renderAll()};
+$("resetSemBtn").onclick=()=>{if(!confirm("Archive this semester? Clears logs + resets prior counts to 0."))return;
+  S.subjects.forEach(s=>{s.baseTotal=0;s.basePresent=0});S.logs={};save();renderAll()};
+/* timetable modal */
+function buildTT(){
+  const off=$("offDays");off.innerHTML="";
+  ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach((n,i)=>{
+    const b=document.createElement("button");b.className="btn small";b.textContent=(S.off.includes(i)?"✓ ":"")+n;
+    b.style.opacity=S.off.includes(i)?"1":".55";
+    b.setAttribute("aria-pressed",S.off.includes(i));
+    b.onclick=()=>{const ix=S.off.indexOf(i);ix>=0?S.off.splice(ix,1):S.off.push(i);save();renderAll();refreshTT()};
+    off.appendChild(b)});
+  const ed=$("ttEditor");ed.innerHTML="";
+  DAYS.forEach(d=>{
+    const wrap=document.createElement("div");wrap.className="tt-day";
+    wrap.innerHTML=`<b>${d}</b> <span class="mono" style="font-size:11px;color:var(--ink-soft)">${(S.timetable[d]||[]).length} classes</span>`;
+    (S.timetable[d]||[]).forEach((sl,i)=>{
+      if(!sl.id) sl.id=uid();
+      const r=document.createElement("div");r.className="slot-row";
+      r.innerHTML=`<input type="time" value="${esc(sl.time||"09:00")}" aria-label="${d} class time"><select aria-label="${d} subject">${S.subjects.map(s=>`<option value="${s.id}" ${s.id===sl.subjectId?"selected":""}>${esc(s.code)}</option>`).join("")}</select><button class="btn small" aria-label="remove">✕</button>`;
+      const[ti,se,del]=r.children;
+      ti.onchange=()=>{sl.time=ti.value;save();renderAll()};
+      se.onchange=()=>{sl.subjectId=se.value;save();renderAll()};
+      del.onclick=()=>{S.timetable[d].splice(i,1);save();renderAll();refreshTT()};
+      wrap.appendChild(r)});
+    const add=document.createElement("button");add.className="btn small";add.textContent="+ add class";add.style.marginTop="6px";
+    add.onclick=()=>{if(!S.subjects.length){alert("Add a subject first.");return}S.timetable[d].push({id:uid(),time:"10:00",subjectId:S.subjects[0].id});save();renderAll();refreshTT()};
+    wrap.appendChild(add);ed.appendChild(wrap)});
+}
+function refreshTT(){
+  const sheet=document.querySelector("#ttModal .sheet");
+  const st=sheet?sheet.scrollTop:0, hv=$("holidaysInput").value;
+  buildTT();
+  $("holidaysInput").value=hv;
+  if(sheet) sheet.scrollTop=st;
+}
+$("editTTBtn").onclick=()=>{buildTT();$("holidaysInput").value=(S.holidays||[]).join(", ");$("ttModal").classList.add("open")};
+$("closeTT").onclick=()=>$("ttModal").classList.remove("open");
+$("saveTT").onclick=()=>{S.holidays=$("holidaysInput").value.split(",").map(s=>s.trim()).filter(s=>/^\d{4}-\d{2}-\d{2}$/.test(s));save();$("ttModal").classList.remove("open");renderAll()};
+/* exports */
+$("exportCsv").onclick=()=>{
+  let csv="﻿subject,code,attended,held,pct,safe_bunk,must_attend\n";
+  S.subjects.forEach(s=>{const st=statsFor(s);csv+=[csvCell(s.name),csvCell(s.code),st.pre,st.tot,st.pct.toFixed(1),st.safe,st.need].join(",")+"\n"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="attendance-ledger.csv";a.click();
+};
+$("copySummary").onclick=async()=>{
+  const o=overall();
+  const txt=`${S.college} — Attendance ${o.pct.toFixed(1)}% (${o.p}/${o.t})\n`+S.subjects.map(s=>{const st=statsFor(s);return `• ${s.code} ${st.pct.toFixed(1)}% — bunk ${st.safe} / attend ${st.need}`}).join("\n");
+  try{await navigator.clipboard.writeText(txt)}catch{prompt("Copy:",txt)}
+};
+$("backupBtn").onclick=()=>{
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:"application/json"}));a.download="attendance-backup-"+iso(new Date())+".json";a.click();
+};
+$("restoreBtn").onclick=()=>$("restoreFile").click();
+$("restoreFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(!obj||typeof obj!=="object"||!Array.isArray(obj.subjects)) throw 0;S=Object.assign(defState(),obj);ensureSlotIds();migrateOldLogs();validateState();save();renderAll()}catch{alert("Bad backup file.")}finally{e.target.value=""}};r.readAsText(f)};
+document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("open")}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".overlay.open").forEach(o=>o.classList.remove("open"))});
+renderAll();
+</script>
+</body>
+</html>
