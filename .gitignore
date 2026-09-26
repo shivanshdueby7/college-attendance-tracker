@@ -1,2 +1,10 @@
 .vercel/
 node_modules/
+*.apk
+*.aab
+*.keystore
+*.jks
+*.env
+*backup*.json
+.DS_Store
+Thumbs.db
