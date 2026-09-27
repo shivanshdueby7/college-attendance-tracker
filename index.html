@@ -73,7 +73,6 @@ body::before{
   display:flex; align-items:center; justify-content:space-between; gap:12px;
   padding:12px 18px; max-width:920px; margin:0 auto;
 }
-.brand-kicker{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em; color:var(--ink-soft)}
 .brand-name{font-family:"Fraunces",serif; font-weight:900; font-size:22px; line-height:1; letter-spacing:-.02em; border:none; background:transparent; color:var(--ink); width:100%; max-width:320px}
 .brand-name:focus{outline:2px dashed var(--amber); outline-offset:4px}
 .seal{display:flex; align-items:center; gap:10px}
@@ -281,7 +280,6 @@ table.ledger td{border-bottom:1px solid var(--rule); padding:8px 6px; font-famil
 <body>
 <header class="masthead">
   <div>
-    <div class="brand-kicker">ATTENDANCE LEDGER • <span id="year">2025–26</span> • <span id="streakLine" class="mono">0-day streak</span></div>
     <input id="collegeInput" class="brand-name" value="My College" aria-label="College name">
   </div>
   <div class="seal">
@@ -378,27 +376,6 @@ table.ledger td{border-bottom:1px solid var(--rule); padding:8px 6px; font-famil
     </div>
   </section>
 
-  <section class="sec" id="sec-sync">
-    <div class="sec-head"><span class="sec-num">06</span><h2 class="sec-title">College sync — UCER Naini</h2><span class="sec-sub mono">portal import</span></div>
-    <div class="sec-body">
-      <p class="rule-note">Students log in at <b>student.icampuserp.in</b> (ucer.* is the staff login). The portal shows a CAPTCHA, so no app can log in for you — you log in once with your own hands, open your attendance page, then tap IMPORT inside it. Your ID and password never leave this device and are never stored by the Ledger.</p>
-      <label class="lbl" for="syncId">Student ID (stays on this device)</label>
-      <input type="text" id="syncId" placeholder="Student ID" inputmode="numeric" autocomplete="off">
-      <div class="toolbar">
-        <button class="btn primary" id="openStudent">Open student login →</button>
-        <button class="btn" id="openIcampus">Staff portal →</button>
-        <button class="btn" id="openAkm">AKM login →</button>
-      </div>
-      <div id="pendingImport" style="margin-top:12px"></div>
-      <label class="lbl" for="manualImport">Or paste portal rows (CSV: code,name,held,attended — one per line)</label>
-      <textarea id="manualImport" rows="3" style="border:2px solid var(--ink);border-radius:6px;background:var(--paper);color:var(--ink);padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;width:100%" placeholder="CS201,Data Structures,20,15"></textarea>
-      <div class="toolbar">
-        <button class="btn" id="applyManual">Apply pasted rows →</button>
-      </div>
-      <div id="importResult" style="margin-top:10px"></div>
-    </div>
-  </section>
-
   <p class="mono" style="text-align:center; color:var(--ink-soft); font-size:11.5px; margin-top:26px">DATA STAYS ON THIS DEVICE • NOTHING UPLOADED</p>
 </div>
 
@@ -407,7 +384,6 @@ table.ledger td{border-bottom:1px solid var(--rule); padding:8px 6px; font-famil
   <button class="btn small" onclick="document.getElementById('sec-subjects').scrollIntoView()">Subjects</button>
   <button class="btn small" onclick="document.getElementById('sec-planner').scrollIntoView()">Bunk?</button>
   <button class="btn small" onclick="document.getElementById('sec-cal').scrollIntoView()">Month</button>
-  <button class="btn small" onclick="document.getElementById('sec-sync').scrollIntoView()">Sync</button>
 </div>
 
 <div class="overlay" id="subjectModal">
@@ -472,6 +448,7 @@ const hadStored=(()=>{try{return !!localStorage.getItem(KEY)}catch{return true}}
 try{S=JSON.parse(localStorage.getItem(KEY))||defState()}catch{S=defState()}
 if(!S||!S.subjects) S=defState();
 ensureSlotIds(); migrateOldLogs(); validateState();
+try{localStorage.removeItem("portal_import");localStorage.removeItem("ledger_sync_id")}catch(e){} // retired college-sync keys
 // respect OS theme on first run (theming-system: never default-blind)
 if(!hadStored){try{if(matchMedia("(prefers-color-scheme: dark)").matches)S.theme="dark"}catch{}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));return true}catch(e){console.warn("save failed",e);showSaveWarn();return false}}
@@ -662,7 +639,7 @@ function renderSubjects(){
     if(sts.every(x=>x==="present"||x==="cancelled")&&sts.some(x=>x==="present")) streak++;
     else break;
   }}
-  $("streakLine").textContent=streak+"-day streak";
+  const _sl=$("streakLine"); if(_sl)_sl.textContent=streak+"-day streak";
 }
 /* ---------- PLANNER ---------- */
 function nextDatesFor(subjectId,n,cap){
@@ -827,83 +804,8 @@ function renderAll(){
   const tb=$("themeBtn"); if(tb) tb.textContent=(S.theme==="dark"?"DARK":"LIGHT");
   save();renderToday();renderSubjects();renderPlanner();renderCal();renderStats();
   $("collegeInput").value=S.college||"My College";
-  checkPendingImport();
-}
-/* ---------- COLLEGE SYNC ---------- */
-const PORTALS={student:"https://student.icampuserp.in/Login.aspx",icampus:"https://ucer.icampuserp.in/",akm:"https://united.akmemis.com/student/login"};
-function openPortal(which){
-  const url=PORTALS[which]; if(!url) return;
-  try{
-    if(window.Ledger&&typeof window.Ledger.openPortal==="function"){window.Ledger.openPortal(url);return}
-  }catch(e){}
-  window.open(url,"_blank","noopener");
-}
-function parseImportRows(text){
-  // accepts scraped JSON [{code,name,held,attended}] or CSV lines code,name,held,attended
-  text=String(text||"").trim(); if(!text) return [];
-  if(text[0]==="["||text[0]==="{"){
-    try{
-      let j=JSON.parse(text); if(!Array.isArray(j)) j=[j];
-      const tables=j.flatMap(t=>t&&t.rows?t.rows:(Array.isArray(t)?t:[t]));
-      return tables.map(r=>({code:String(r.code||r.sub||"").trim(),name:String(r.name||r.subject||r.code||"").trim(),
-        held:Math.max(0,Math.floor(+r.held||+r.total||0)),attended:Math.max(0,Math.floor(+r.attended||+r.present||0))}))
-        .filter(r=>r.code&&r.held>0);
-    }catch(e){return []}
-  }
-  return text.split(/\r?\n/).map(l=>l.split(",")).filter(c=>c.length>=4)
-    .map(c=>({code:c[0].trim(),name:(c[1]||c[0]).trim(),held:Math.max(0,Math.floor(+c[2]||0)),attended:Math.max(0,Math.floor(+c[3]||0))}))
-    .filter(r=>r.code&&r.held>0);
-}
-function applyImportRows(rows){
-  const out=[];
-  rows.forEach(r=>{
-    const att=Math.min(r.attended,r.held);
-    const ex=S.subjects.find(s=>s.code.toLowerCase()===r.code.toLowerCase());
-    if(ex){ex.baseTotal+=r.held;ex.basePresent+=att;ex.name=ex.name||r.name;out.push(`+ ${r.code}: added ${att}/${r.held}`)}
-    else{S.subjects.push({id:uid(),name:r.name||r.code,code:r.code,type:"Lecture",target:S.target||75,baseTotal:r.held,basePresent:att});out.push(`new ${r.code}: ${att}/${r.held}`)}
-  });
-  save();renderAll();
-  return out;
-}
-function checkPendingImport(){
-  const box=$("pendingImport"); if(!box) return; box.innerHTML="";
-  let raw=null;
-  try{raw=localStorage.getItem("portal_import")}catch(e){}
-  if(!raw) return;
-  let rows=[];
-  try{rows=parseImportRows(raw)}catch(e){}
-  const d=document.createElement("div");d.className="okbox";
-  if(!rows.length){d.textContent="Portal returned no readable rows. Open the attendance page first, then IMPORT."}
-  else{
-    d.innerHTML=`Portal grabbed <b>${rows.length}</b> subject rows. `+
-      rows.slice(0,6).map(r=>`${esc(r.code)} ${r.attended}/${r.held}`).join(" · ")+
-      (rows.length>6?` · +${rows.length-6} more`:"");
-    const go=document.createElement("button");go.className="btn primary";go.style.marginTop="8px";
-    go.textContent=`Apply ${rows.length} rows →`;
-    go.onclick=()=>{
-      const done=applyImportRows(rows);
-      try{localStorage.removeItem("portal_import")}catch(e){}
-      $("importResult").innerHTML=`<div class="okbox">${done.map(esc).join("<br>")}</div>`;
-      checkPendingImport();
-    };
-    const no=document.createElement("button");no.className="btn";no.style.cssText="margin-top:8px;margin-left:8px";no.textContent="Discard";
-    no.onclick=()=>{try{localStorage.removeItem("portal_import")}catch(e){}checkPendingImport()};
-    d.appendChild(document.createElement("br"));d.appendChild(go);d.appendChild(no);
-  }
-  box.appendChild(d);
 }
 /* ---------- EVENTS ---------- */
-$("openStudent").onclick=()=>openPortal("student");
-$("openIcampus").onclick=()=>openPortal("icampus");
-$("openAkm").onclick=()=>openPortal("akm");
-$("syncId").value=(function(){try{return localStorage.getItem("ledger_sync_id")||""}catch(e){return ""}})();
-$("syncId").oninput=e=>{try{localStorage.setItem("ledger_sync_id",e.target.value.trim())}catch(_){}};
-$("applyManual").onclick=()=>{
-  const rows=parseImportRows($("manualImport").value);
-  if(!rows.length){$("importResult").innerHTML='<div class="alert">No readable rows. Format: <span class="mono">CODE,Name,held,attended</span></div>';return}
-  const done=applyImportRows(rows);
-  $("importResult").innerHTML=`<div class="okbox">${done.map(esc).join("<br>")}</div>`;
-};
 $("datePicker").onchange=e=>{S.selectedDate=e.target.value||iso(new Date());S.calCursor=S.selectedDate.slice(0,7)+"-01";save();renderAll()};
 $("markAllP").onclick=()=>{if(S.selectedDate>iso(new Date())){alert("Future date — marking opens on the day.");return}if(isHoliday(S.selectedDate)){alert("Holiday — marking is locked for this date.");return}slotsFor(S.selectedDate).forEach((sl,i)=>{S.logs[logKey(S.selectedDate,slotIdOf(sl,i))]={subjectId:sl.subjectId,status:"present"}});save();renderAll()};
 $("clearDay").onclick=()=>{slotsFor(S.selectedDate).forEach((sl,i)=>delete S.logs[logKey(S.selectedDate,slotIdOf(sl,i))]);save();renderAll()};
