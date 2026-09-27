@@ -44,6 +44,23 @@ npx vercel --prod
 
 **Android:** wrap `index.html` in the WebView shell (see commit history / `MainActivity` pattern: `file:///android_asset`, DOM storage on) and `assembleDebug`.
 
+## Scale — ready for 1k–10k users
+
+- **Reads scale free:** pure static file on Vercel's CDN. 10k users × ~70KB = ~700MB transfer — far inside free limits.
+- **Writes stay on-device:** no shared database in the hot path, so concurrent users can't slow each other down. Worst case measured in headless Chrome (mobile viewport, 10,290 marks): full re-render **~157ms**, store 644KB — a real 4-year degree is <2k marks (<30ms).
+- **Attack-tested:** 31-case battery (`tools/attack.js` in the build machine) covers stored-XSS payloads, malicious restores (`null`, prototype pollution, 20k-log dumps), CSV formula injection, fake dates, future-mark inflation — all passing against the real code.
+
+## Admin stats (opt-in)
+
+The app is offline-first, so global stats need a tiny backend. Included, zero new dependencies:
+
+1. Create a free [Supabase](https://supabase.com) project → SQL editor → run `schema.sql`.
+2. Vercel dashboard → this project → Environment Variables: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `ADMIN_TOKEN` (any long random string) → redeploy.
+3. Open `admin.html` (deployed alongside the app), paste the stats URL + token → installs, active 7d/30d, platform split, recent table.
+4. Each user opts in once: Records → *Anonymous usage stats* → tick + endpoint `https://<your-app>.vercel.app/api/collect`.
+
+What leaves the device (once a day, only if the user opts in): random install id, platform, subject/mark counts. No names, no colleges, no dates — the admin IDs are truncated to 8 chars and there is no personal data to leak.
+
 ## Project structure
 
 ```

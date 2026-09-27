@@ -357,6 +357,14 @@ table.ledger td{border-bottom:1px solid var(--rule); padding:8px 6px; font-famil
         <button class="btn" id="restoreBtn">Restore</button>
         <input type="file" id="restoreFile" accept="application/json" hidden>
       </div>
+      <div class="proj" style="margin-top:12px">
+        <label class="mono" style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer">
+          <input type="checkbox" id="teleOn" style="width:auto;min-height:44px"> Anonymous usage stats (opt-in)
+        </label>
+        <label class="lbl" for="teleUrl">Stats endpoint (empty = disabled)</label>
+        <input type="text" id="teleUrl" placeholder="https://your-app.vercel.app/api/collect" inputmode="url" autocomplete="off">
+        <div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:6px">Once a day sends: random install id, platform, subject + mark counts. No names, no college, no dates.</div>
+      </div>
     </div>
   </section>
 
@@ -426,7 +434,7 @@ const parseISO=s=>{const[a,b,c]=String(s||"").split("-").map(Number);return new 
 const fmtD=d=>d.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const csvCell=v=>{let s=String(v==null?"":v);if(/^\s*[=+\-@]/.test(s))s="'"+s;return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
-function defState(){return{college:"My College",target:75,theme:"light",subjects:[],timetable:{MON:[],TUE:[],WED:[],THU:[],FRI:[],SAT:[],SUN:[]},off:[0],holidays:[],logs:{},undoStack:[],calCursor:iso(new Date()),selectedDate:iso(new Date())}}
+function defState(){return{college:"My College",target:75,theme:"light",subjects:[],timetable:{MON:[],TUE:[],WED:[],THU:[],FRI:[],SAT:[],SUN:[]},off:[0],holidays:[],logs:{},undoStack:[],telemetry:{on:false,url:"",id:uid(),last:""},calCursor:iso(new Date()),selectedDate:iso(new Date())}}
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))||defState()}catch{S=defState()}
 if(!S||!S.subjects) S=defState();
@@ -486,6 +494,10 @@ function validateState(){
   });
   if(!Array.isArray(S.undoStack)) S.undoStack=[];
   S.undoStack=S.undoStack.filter(e=>e&&typeof e==="object"&&subj(e.sub)&&["p","a"].includes(e.op)).slice(-200);
+  if(!S.telemetry||typeof S.telemetry!=="object") S.telemetry={on:false,url:"",id:uid(),last:""};
+  S.telemetry.on=!!S.telemetry.on;
+  if(typeof S.telemetry.url!=="string") S.telemetry.url="";
+  if(typeof S.telemetry.id!=="string"||!/^[A-Za-z0-9_-]{1,64}$/.test(S.telemetry.id)) S.telemetry.id=uid();
   if(typeof S.college!=="string") S.college="My College";
   const dflt=iso(new Date());
   if(!/^\d{4}-\d{2}-\d{2}$/.test(S.calCursor||"")) S.calCursor=dflt;
@@ -778,10 +790,26 @@ function renderStats(){
     return `<tr><td>${esc(s.code)}</td><td>${st.pre}</td><td>${st.tot}</td><td>${st.pct.toFixed(1)}%</td><td>${st.safe}</td><td>${fmtNeed(st.need)}</td></tr>`}).join("");
 }
 function renderAll(){
+  // NOTE: callers save() before renderAll(); no save here (was double-stringifying ~600KB per tap)
   document.documentElement.dataset.theme=S.theme||"light";
   const tb=$("themeBtn"); if(tb) tb.textContent=(S.theme==="dark"?"DARK":"LIGHT");
-  save();renderToday();renderSubjects();renderPlanner();renderCal();renderStats();
+  renderToday();renderSubjects();renderPlanner();renderCal();renderStats();
   $("collegeInput").value=S.college||"My College";
+  if($("teleOn")) $("teleOn").checked=!!(S.telemetry&&S.telemetry.on);
+  if($("teleUrl")) $("teleUrl").value=(S.telemetry&&S.telemetry.url)||"";
+  ping();
+}
+function ping(){
+  // opt-in anonymous heartbeat, at most once a day, never blocks UI
+  try{
+    const t=S.telemetry; if(!t||!t.on||!t.url) return;
+    const today=iso(new Date()); if(t.last===today) return;
+    t.last=today; save();
+    const ua=navigator.userAgent||"";
+    fetch(t.url,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:t.id,platform:/Android/i.test(ua)?"android":"web",v:1,
+        subjects:S.subjects.length,marks:Object.keys(S.logs).length,theme:S.theme||"light"})}).catch(()=>{});
+  }catch(e){/* telemetry must never break the app */}
 }
 /* ---------- EVENTS ---------- */
 $("datePicker").onchange=e=>{S.selectedDate=e.target.value||iso(new Date());S.calCursor=S.selectedDate.slice(0,7)+"-01";save();renderAll()};
@@ -791,6 +819,8 @@ $("holidayBtn").onclick=()=>{const d=S.selectedDate;const ix=S.holidays.indexOf(
 $("themeBtn").onclick=()=>{S.theme=document.documentElement.dataset.theme==="dark"?"light":"dark";save();renderAll()};
 let collegeT=null;
 $("collegeInput").oninput=e=>{S.college=e.target.value;clearTimeout(collegeT);collegeT=setTimeout(save,300)};
+$("teleOn").onchange=e=>{S.telemetry.on=e.target.checked;save();ping()};
+$("teleUrl").onchange=e=>{S.telemetry.url=e.target.value.trim();save();ping()};
 $("planRange").oninput=renderPlanner;
 $("planSubject").onchange=renderPlanner;
 $("planTarget").onchange=renderPlanner;
